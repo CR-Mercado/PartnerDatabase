@@ -10,8 +10,15 @@ library(rvest)
 library(tm)
 
 # Define server logic required to 
-shinyServer(function(input, output) {
-   
+shinyServer(function(input, output, session) {
+  # stop app when done 
+  if (!interactive()) {
+    session$onSessionEnded(function() {
+      stopApp()
+      q("no")
+    })
+  }
+  
    # Current Partner Database
    
    current.partners <- read.csv("PartnerDatabase.csv", stringsAsFactors = FALSE, fileEncoding = "UTF-8-BOM")
@@ -98,7 +105,7 @@ shinyServer(function(input, output) {
  # and will require a rename at download as well. Not sure why. 
  output$get.data <- downloadHandler(
    filename = function(){ 
-     return(paste("toppartners",".csv",sep=""))
+     paste("toppartners",".csv",sep="")
      },
    content = function(file){ 
      write.csv(partners.df(), file, row.names = FALSE)
@@ -122,16 +129,21 @@ PartnerCaps <- function(partner.name, website, caps.table){
   # the output of this function can be rbind() to the table 
   
   if(grepl("http" ,website,fixed = TRUE) == FALSE){return("website requires http part")} #R needs http:// to search the web 
-  site <- read_html(website)
+  site <- read_html(url(website))
   site.nodes <- html_nodes(x=site,"a") # "a" gets the links 
   sites.list <- html_attr(site.nodes, "href") # get a list of those links
-  sites.list <- sites.list[!is.na(sites.list)] # remove any NAs
-  
+  socialnet.index <- grep("facebook|linkedin|twitter|google|\\.pdf|\\.php|youtube|mailto|index\\.asp|^/|404|#|instagram", sites.list) 
+  # don't go to social networking sites or items that cannot be opened.  
+  #   the \\ allows for . to be read as a . normally . means any-character.  the ^/ means begins with / 
+  #readLines doesnt work on these well and its super slow. 
+  sites.list[socialnet.index] <- NA   # make any social networking sites NA 
+  sites.list <- sites.list[!is.na(sites.list)] # remove all the NAs
+  sites.list <- unique(sites.list)
   
   # go through the sites and bind up all of the text - this is NOT optimized and very large and ugly 
   temp.company = NULL
   for(j in sites.list){  
-    
+    print(j)
     # if theres an error with the site, skip it  also lowercase everything
     # errors are typically a link that goes to an image (such as a thumbnail) 
     # this error catching function does nothing, thus ignoring errors. 
