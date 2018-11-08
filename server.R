@@ -4,20 +4,17 @@
 #'
 #' downloads the top 20 suggested partners after a search
 #'
+#' 
 
 library(shiny)
 library(rvest)
 library(tm)
 
 # Define server logic required to 
-shinyServer(function(input, output, session) {
+shinyServer(function(input, output) {
   # stop app when done 
-  if (!interactive()) {
-    session$onSessionEnded(function() {
-      stopApp()
-      q("no")
-    })
-  }
+ 
+  
   
    # Current Partner Database
    
@@ -26,9 +23,10 @@ shinyServer(function(input, output, session) {
    #due to BOM encoding issues in Excel reading of csv files this is an error catch: spaces become .  X gets added randomly, and ï.. gets put in
    colnames(current.partners) <- gsub("ï..","",colnames(current.partners), fixed = TRUE)
    colnames(current.partners) <- gsub("X","",colnames(current.partners))
-   colnames(current.partners) <- gsub("."," ",colnames(current.partners), fixed = TRUE)
+   colnames(current.partners) <- gsub(".","_",colnames(current.partners), fixed = TRUE)
    
    current.capabilities <- read.csv("Capabilities.csv", stringsAsFactors = FALSE, header = FALSE,fileEncoding = "UTF-8-BOM")
+   
    print("getting started")
    # Adding a new partner 
    # input$new.partners is a dataframe of 4 columns:  name | size | type | datapath // read only the exact item in the datapath column
@@ -69,14 +67,22 @@ shinyServer(function(input, output, session) {
     
    # Creating the Top Partners Table
   partners.df <- eventReactive(input$partner.search, {
-     the.partnersearch <- read.csv("PartnerDatabase.csv", stringsAsFactors = FALSE, fileEncoding = "UTF-8-BOM")
-     
+    the.partnersearch <-  read.csv("PartnerDatabase.csv", stringsAsFactors = FALSE, fileEncoding = "UTF-8-BOM")
+    
+    #due to BOM encoding issues in Excel reading of csv files this is an error catch: spaces become .  X gets added randomly, and ï.. gets put in
+    colnames(the.partnersearch) <- gsub("ï..","",colnames(the.partnersearch), fixed = TRUE)
+    colnames(the.partnersearch) <- gsub("X","",colnames(the.partnersearch))
+    colnames(the.partnersearch) <- gsub(".","_",colnames(the.partnersearch), fixed = TRUE)
+    
      # type in free text:  health, communication, marketing      --> read as  "health" "communication" "marketing"
      caps.to.search <- tolower(unlist(strsplit(input$capabilities.to.search,", ")))
+     caps.to.search <- gsub(" ","_",caps.to.search)
      print("databaser read")
+     temp.capabilites <- current.capabilities
+     temp.capabilites <- gsub(" ","_", temp.capabilites[,1])
      # ignore requested capabilities that aren't actually in the database. lowercasing to be safe. 
-     relevant.capabilities.to.search <- subset(current.capabilities[,1],
-                                               current.capabilities[,1] %in% caps.to.search)
+     relevant.capabilities.to.search <- subset(temp.capabilites,
+                                               temp.capabilites %in% caps.to.search)
     
       # select only the relevant columns 
      
@@ -96,8 +102,10 @@ shinyServer(function(input, output, session) {
                  ) # this is the partners.df close of eventReactive
   
   # render the top 20 as a dataset
-   output$top.partners <-  renderTable({ 
-   head(partners.df() , n = 20)
+   output$top.partners <-  renderDataTable({
+     d <- partners.df()
+     colnames(d) <- gsub("_"," ",colnames(d))
+     data.frame(d, check.names = FALSE)
      }) 
   
  
