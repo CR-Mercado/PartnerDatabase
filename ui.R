@@ -51,12 +51,12 @@ shinyUI(fluidPage(
         downloadButton("get.data",label = "Download to csv")
       
     ),
-    
+     
     # Show a 
     mainPanel(
      tabsetPanel(
        tabPanel("Partner Suggestions",
-                tableOutput("top.partners")),
+                dataTableOutput("top.partners")),
        tabPanel(title = "Database Design",
                 ("The database is designed like a skills matrix. With Partners & Website as rows, and capabilities as columns. 
                    The contents is then 1s and 0s, if the partner has the capability in its set of websites, they get a 1 in that capability
